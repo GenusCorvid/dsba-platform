@@ -30,7 +30,29 @@ def preprocess_dataframe(df):
     ML algorithms typically can't only handle numbers, so there may be quite a lot of feature engineering and preprocessing with other types of data.
     Here, we take a very simplistic approach of applying the same treatment to all non-numeric columns.
     """
-    for column in df.select_dtypes(include=["object"]):
+    # Make a copy to avoid modifying the original dataframe
+    df = df.copy()
+    
+    # Identify numeric and categorical columns
+    numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns
+    categorical_cols = df.select_dtypes(include=['object']).columns
+    
+    # Impute missing values in numeric columns with median
+    if len(numeric_cols) > 0 and df[numeric_cols].isna().any().any():
+        for col in numeric_cols:
+            if df[col].isna().any():
+                df[col] = df[col].fillna(df[col].median())
+    
+    # Impute missing values in categorical columns with most frequent value
+    # and encode categorical columns
+    for column in categorical_cols:
+        # First impute missing values with most frequent value
+        if df[column].isna().any():
+            most_frequent = df[column].mode()[0]
+            df[column] = df[column].fillna(most_frequent)
+        
+        # Then encode the categorical values
         le = LabelEncoder()
         df[column] = le.fit_transform(df[column].astype(str))
+    
     return df
